@@ -3,12 +3,14 @@
 instantiating Babel object in flask application
 '''
 
+
 from flask import Flask, render_template, request, g
 from flask_babel import Babel, gettext
-from datetime import datetime
+
 
 app = Flask(__name__)
 babel = Babel(app)
+
 
 users = {
     1: {"name": "Balou", "locale": "fr", "timezone": "Europe/Paris"},
@@ -16,6 +18,7 @@ users = {
     3: {"name": "Spock", "locale": "kg", "timezone": "Vulcan"},
     4: {"name": "Teletubby", "locale": None, "timezone": "Europe/London"},
 }
+
 
 class Config:
     '''
@@ -25,17 +28,19 @@ class Config:
     BABEL_DEFAULT_LOCALE = 'en'
     BABEL_DEFAULT_TIMEZONE = 'UTC'
 
-app.config.from_object(Config)
 
 @babel.localeselector
 def get_locale():
     '''Determine the best match with supported languages'''
     locale = request.args.get('locale')
-    if locale and locale in app.config['LANGUAGES']:
+    if locale is not None and locale in Config.LANGUAGES:
         return locale
-    if g.get('user') and g.user['locale'] in app.config['LANGUAGES']:
-        return g.user['locale']
-    return request.accept_languages.best_match(app.config['LANGUAGES'])
+    locale = request.accept_languages.best_match(app.config.get('LANGUAGES'))
+    return locale
+
+
+app.config.from_object('5-app.Config')
+
 
 def get_user():
     '''Returns a user dictionary or None, if the user doesn't exist'''
@@ -44,6 +49,7 @@ def get_user():
         return users[int(user_id)]
     return None
 
+
 @app.before_request
 def before_request():
     '''Handles request before making the request to the API'''
@@ -51,13 +57,8 @@ def before_request():
     if user:
         g.user = user
 
+
 @app.route('/')
 def default():
     '''Return 5-index.html template'''
-    current_time = datetime.now().strftime("%b %d, %Y, %I:%M:%S %p")
-    message = gettext("The current time is %(current_time)s.", current_time=current_time)
-    return render_template('5-index.html', message=message)
-
-if __name__ == "__main__":
-    app.run(debug=True)
-
+    return render_template('5-index.html')
